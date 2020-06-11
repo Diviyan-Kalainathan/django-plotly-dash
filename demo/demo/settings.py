@@ -37,11 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'channels',
-    'bootstrap4',
-
     'django_plotly_dash.apps.DjangoPlotlyDashConfig',
+    'bootstrap4',
     'dpd_static_support',
 ]
 
@@ -88,12 +86,22 @@ ASGI_APPLICATION = 'demo.routing.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
+DATABASE_ROUTERS = ['demo.models.DemoRouter']
+DATABASE_APPS_MAPPING = {'local_db': 'local_db'}
 
 DATABASES = {
     'default': {
+         'ENGINE': 'djongo',
+         'NAME': 'testdb2',
+         'CLIENT': {
+            'host': '127.0.0.1',
+            'port': 27017
+    }},
+    'local_db':{
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+        'NAME': os.path.join(BASE_DIR, 'local.db.sqlite3'),
+    },
+
 }
 
 
