@@ -30,7 +30,7 @@ import inspect
 
 from dash import Dash
 from flask import Flask
-
+from dash._utils import split_callback_id
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -288,7 +288,9 @@ class PseudoFlask(Flask):
     def after_request(self, *args, **kwargs):
         pass
     def errorhandler(self, *args, **kwargs): # pylint: disable=no-self-use
-        return args[0]
+        def eh_func(f):
+            return args[0]
+        return eh_func
     def add_url_rule(self, *args, **kwargs):
         route = kwargs['endpoint']
         self.endpoints[route] = kwargs
@@ -316,6 +318,7 @@ class WrappedDash(Dash):
         kwargs['url_base_pathname'] = self._base_pathname
         kwargs['server'] = self._notflask
 
+        print(kwargs, __name__)
         super(WrappedDash, self).__init__(__name__,
                                           **kwargs)
 
@@ -561,6 +564,9 @@ class WrappedDash(Dash):
 
         if len(args) < len(self.callback_map[target_id]['inputs']):
             return 'EDGECASEEXIT'
+
+        outputs_list = body.get('outputs') or split_callback_id(output)
+        argMap['outputs_list'] = outputs_list
 
         res = self.callback_map[target_id]['callback'](*args, **argMap)
         if da:
