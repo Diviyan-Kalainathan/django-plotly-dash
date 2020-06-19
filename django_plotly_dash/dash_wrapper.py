@@ -318,7 +318,7 @@ class WrappedDash(Dash):
         kwargs['url_base_pathname'] = self._base_pathname
         kwargs['server'] = self._notflask
 
-        print(kwargs, __name__)
+        # print(kwargs, __name__)
         super(WrappedDash, self).__init__(__name__,
                                           **kwargs)
 
@@ -539,16 +539,40 @@ class WrappedDash(Dash):
             outputs = [output,]
 
         args = []
-
         da = argMap.get('dash_app', None)
-
         for component_registration in self.callback_map[target_id]['inputs']:
+            if isinstance(component_registration , list):
+                continue
             for c in inputs:
+                if isinstance(c, list):
+                    continue
                 if c['property'] == component_registration['property'] and c['id'] == component_registration['id']:
                     v = c.get('value', None)
                     args.append(v)
                     if da:
                         da.update_current_state(c['id'], c['property'], v)
+
+        for component_registration in self.callback_map[target_id]['inputs']:
+            try:
+                iddict = eval(component_registration['id'])
+                if not isinstance(iddict, dict):
+                    continue
+            except NameError:
+                continue
+            for c in inputs:
+                # print(c, component_registration, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                if not isinstance(c, list):
+                    continue
+                if iddict['index'][0]=='ALL':
+                    selectlist = [i for i in c if i['id']['type'] ==iddict['type'] and i['property']==component_registration['property']]
+                    v = [sel.get('value', None) for sel in selectlist]
+                    args.append(v)
+                    if da:
+                        for sel in selectlist:
+                            da.update_current_state(sel['id'], sel['property'], v)
+
+                else:
+                    raise NotImplementedError
 
         for component_registration in self.callback_map[target_id]['state']:
             for c in state:
@@ -566,7 +590,17 @@ class WrappedDash(Dash):
             return 'EDGECASEEXIT'
 
         outputs_list = body.get('outputs') or split_callback_id(output)
-        argMap['outputs_list'] = outputs_list
+        if  'container' in output:
+            argMap = {'outputs_list': outputs_list
+                      }
+        else:
+            argMap['outputs_list'] = outputs_list
+        # del argMap['dash_app_id']
+        # del argMap['dash_app']
+
+        # print(args, argMap)
+        # (1, []) {'dash_app_id': 'BootstrapApplication', 'dash_app': <django_plotly_dash.dash_wrapper.DjangoDash object at 0x7f794ae5cc50>, 'user': <SimpleLazyObject: <function AuthenticationMiddleware.process_request.<locals>.<lambda> at 0x7f79498c2b00>>, 'request': <AsgiRequest: POST '/django_plotly_dash/app/BootstrapApplication/_dash-update-component'>,
+        # 'session_state': {'calls_so_far': 12, 'user_counts': {'AnonymousUser': 12}, 'ind_use': 1, 'bootstrap_demo_state': {'clicks': 0, 'overall': 0}}, 'outputs_list': {'id': 'dropdown-container', 'property': 'children'}}
 
         res = self.callback_map[target_id]['callback'](*args, **argMap)
         if da:
