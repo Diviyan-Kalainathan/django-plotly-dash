@@ -13,7 +13,8 @@ def dash_example_1_view(request, template_name="demo_six.html", **kwargs):
 
     # create some context to send over to Dash:
     dash_context = request.session.get("django_plotly_dash", dict())
-    dash_context['django_to_dash_context'] = "I am Dash receiving context from Django"
+    dash_context['django_to_dash_context'] = "I am Dash 22 receiving context from Django"
+    dash_context['yolo'] = "Jpp"
     request.session['django_plotly_dash'] = dash_context
 
     return render(request, template_name=template_name, context=context)

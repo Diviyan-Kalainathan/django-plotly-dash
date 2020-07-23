@@ -13,14 +13,29 @@ import plotly.graph_objs as go
 #import dpd_components as dpd
 import numpy as np
 from django_plotly_dash import DjangoDash
-
+from threading import Lock
 #from .urls import app_name
 app_name = "DPD demo application"
 
 dashboard_name1 = 'dash_example_1'
-dash_example1 = DjangoDash(name=dashboard_name1,
+class DD(DjangoDash):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.saveid = None
+        self.saveidLock = Lock()
+
+    def set_saveid(self, saveid):
+        if self.saveid is None:
+            self.saveidLock.acquire()
+            try:
+                if self.saveid is None:
+                    self.saveid = saveid
+            finally:
+                self.saveidLock.release()
+
+dash_example1 = DD(name=dashboard_name1,
                            serve_locally=True,
-                           app_name=app_name
+                           app_name=app_name,
                           )
 
 # Below is a random Dash app.
@@ -38,7 +53,6 @@ dash_example1.layout = html.Div(id='main',
                                                           ),
                                               html.Div(id='test-output-div')
                                              ]),
-
                                     dcc.Dropdown(
                                         id='my-dropdown2',
                                         options=[
@@ -49,8 +63,10 @@ dash_example1.layout = html.Div(id='main',
                                         value='Oranges',
                                         className='col-md-12',
                                     ),
+                                    html.Div(id='none', children=[], style={'display':'none'}),
 
-                                    html.Div(id='test-output-div2')
+                                    html.Div(id='test-output-div2'),
+                                    dcc.Input(id='test-output-div3', type='hidden', value='filler text'),
 
                                     ]) # end of 'main'
 
@@ -86,16 +102,25 @@ def callback_test(*args, **kwargs): #pylint: disable=unused-argument
 
     return children
 
+@dash_example1.expanded_callback(
+    dash.dependencies.Output('test-output-div3', 'value'), [dash.dependencies.Input('none', 'children')])
+def callback_test4(*args, **kwargs):
+    'Callback to exercise session functionality'
+    # print(dir(dash_example1))
+    print("SAVEIDB", dash_example1.saveid, kwargs['session_state']['testDSS'])
+    dash_example1.set_saveid(kwargs['session_state']['testDSS'])
+    print("SAVEID", dash_example1.saveid, kwargs['session_state']['testDSS'])
+
+
+    return kwargs['session_state']['testDSS']
 
 @dash_example1.expanded_callback(
     dash.dependencies.Output('test-output-div2', 'children'),
     [dash.dependencies.Input('my-dropdown2', 'value')])
 def callback_test2(*args, **kwargs):
     'Callback to exercise session functionality'
-
-    print(args)
-    print(kwargs)
-
+    # print(dir(dash_example1))
+    print(args, kwargs)
     children = [html.Div(["You have selected %s." %(args[0])]),
                 html.Div(["The session context message is '%s'" %(kwargs['session_state']['django_to_dash_context'])])]
 
